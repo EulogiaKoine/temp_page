@@ -525,12 +525,12 @@ loginButton.<span class="function">addActionListener</span>(e -> {
 <span class="keyword">this</span>.<span class="function">add</span>(loginButton);
 </code></pre>
 
-                        <h3>레이아웃 부품: AppBasePanel, AppTitledPanel</h3>
+                        <h3>레이아웃 부품: AppPanel, AppTitledPanel</h3>
                         <p>
                             컴포넌트들을 그룹화하여 배치할 때 사용한다. HTML의 `&lt;div&gt;`와 비슷하다.
                         </p>
                         
-                        <h4>AppBasePanel (투명 `div`)</h4>
+                        <h4>AppPanel (투명 `div`)</h4>
                         <p>
                             여러 컴포넌트를 묶기 위한 투명한 패널이다. 레이아웃을 잡는 용도로만 사용한다.
                         </p>
@@ -552,8 +552,8 @@ searchPanel.<span class="function">add</span>(<span class="keyword">new</span> <
 <span class="keyword">this</span>.<span class="function">add</span>(searchPanel, <span class="type">BorderLayout</span>.NORTH);
 
 <span class="comment">// --- 2. 버튼 영역 (단순 그룹핑) ---</span>
-<span class="comment">// AppBasePanel은 배경이 투명하다.</span>
-<span class="type">AppBasePanel</span> buttonPanel = <span class="keyword">new</span> <span class="type">AppBasePanel</span>(<span class="keyword">new</span> <span class="type">FlowLayout</span>(<span class="type">FlowLayout</span>.RIGHT));
+<span class="comment">// AppPanel은 배경이 투명하다.</span>
+<span class="type">AppPanel</span> buttonPanel = <span class="keyword">new</span> <span class="type">AppPanel</span>(<span class="keyword">new</span> <span class="type">FlowLayout</span>(<span class="type">FlowLayout</span>.RIGHT));
 buttonPanel.<span class="function">add</span>(<span class="keyword">new</span> <span class="type">AppButton</span>(<span class="string">"저장"</span>));
 buttonPanel.<span class="function">add</span>(<span class="keyword">new</span> <span class="type">AppButton</span>(<span class="string">"취소"</span>));
 
