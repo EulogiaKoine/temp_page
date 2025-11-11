@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UI 계층 개발 가이드</title>
-    <!-- Mermaid.js 라이브러리 추가 -->
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <!-- Mermaid.js 라이브러리 제거 -->
     <style>
         /* --- 기본 스타일 (다크 모드 포함) --- */
         :root {
@@ -311,14 +310,17 @@
         .type { color: #0b7285; } /* (클래스명, 타입) */
         html.dark .type { color: #15aabf; }
         
-        /* Mermaid 다이어그램 스타일 */
-        .mermaid {
+        /* 다이어그램 이미지 스타일 */
+        .diagram-image {
             width: 100%;
-            padding: 15px;
-            background-color: var(--nav-bg);
+            max-width: 700px;
+            height: auto;
+            display: block;
+            margin: 20px auto;
             border: 1px solid var(--nav-border);
             border-radius: 8px;
-            text-align: center;
+            background-color: var(--nav-bg);
+            padding: 10px;
         }
     </style>
 </head>
@@ -523,12 +525,12 @@ loginButton.<span class="function">addActionListener</span>(e -> {
 <span class="keyword">this</span>.<span class="function">add</span>(loginButton);
 </code></pre>
 
-                        <h3>레이아웃 부품: AppPanel, AppTitledPanel</h3>
+                        <h3>레이아웃 부품: AppBasePanel, AppTitledPanel</h3>
                         <p>
                             컴포넌트들을 그룹화하여 배치할 때 사용한다. HTML의 `&lt;div&gt;`와 비슷하다.
                         </p>
                         
-                        <h4>AppPanel (투명 `div`)</h4>
+                        <h4>AppBasePanel (투명 `div`)</h4>
                         <p>
                             여러 컴포넌트를 묶기 위한 투명한 패널이다. 레이아웃을 잡는 용도로만 사용한다.
                         </p>
@@ -550,8 +552,8 @@ searchPanel.<span class="function">add</span>(<span class="keyword">new</span> <
 <span class="keyword">this</span>.<span class="function">add</span>(searchPanel, <span class="type">BorderLayout</span>.NORTH);
 
 <span class="comment">// --- 2. 버튼 영역 (단순 그룹핑) ---</span>
-<span class="comment">// AppPanel은 배경이 투명하다.</span>
-<span class="type">AppPanel</span> buttonPanel = <span class="keyword">new</span> <span class="type">AppPanel</span>(<span class="keyword">new</span> <span class="type">FlowLayout</span>(<span class="type">FlowLayout</span>.RIGHT));
+<span class="comment">// AppBasePanel은 배경이 투명하다.</span>
+<span class="type">AppBasePanel</span> buttonPanel = <span class="keyword">new</span> <span class="type">AppBasePanel</span>(<span class="keyword">new</span> <span class="type">FlowLayout</span>(<span class="type">FlowLayout</span>.RIGHT));
 buttonPanel.<span class="function">add</span>(<span class="keyword">new</span> <span class="type">AppButton</span>(<span class="string">"저장"</span>));
 buttonPanel.<span class="function">add</span>(<span class="keyword">new</span> <span class="type">AppButton</span>(<span class="string">"취소"</span>));
 
@@ -592,40 +594,13 @@ newArea.<span class="function">setText</span>(<span class="string">"자동으로
                         <p>
                             아래 다이어그램은 우리 앱의 전체 페이지 전환 흐름을 정의한다.
                         </p>
-                        <ul>
-                            <li><b>실선 (`-->`)</b>: `MapsTo`를 통한 명시적 이동</li>
-                            <li><b>점선 (`-.->`)</b>: 시스템 로직(로그인 확인)에 의한 자동 이동</li>
-                        </ul>
                         
-                        <!-- Mermaid 다이어그램 렌더링 영역 -->
-                        <div class="mermaid" id="mermaid-diag-1">
-graph TD
-    subgraph "애플리케이션 페이지 흐름"
-        direction TB
-        
-        %% 노드 (페이지 ID 포함)
-        Login[로그인<br/>(login)]
-        TourList[여행 패키지 목록<br/>(tourList)]
-        TourDetail[패키지 상세<br/>(tourDetail)]
-        ReservationList[예약 목록<br/>(reservationList)]
-        ReviewWrite[리뷰 작성<br/>(reviewWrite)]
-
-        %% 명시적 흐름 (navigateTo 호출)
-        Login -- "1. 로그인/가입 성공" --> TourList
-        TourList -- "3. 상세보기 (packageId)" --> TourDetail
-        TourDetail -- "4. 예약 성공" --> ReservationList
-        ReservationList -- "5b. 상세보기 (packageId)" --> TourDetail
-        ReservationList -- "5e. 리뷰 (packageId)" --> ReviewWrite
-        ReviewWrite -- "7. 작성 완료 (packageId)" --> TourDetail
-
-        %% 로직/시스템 흐름
-        TourList -.-> |"0. 로그인 필요"| Login
-        TourDetail -.-> |"0. 로그인 필요"| Login
-        ReservationList -.-> |"0. 로그인 필요"| Login
-        ReviewWrite -.-> |"0. 로그인 필요"| Login
-        ReservationList -.-> |"5d. 예약 취소 (새로고침)"| ReservationList
-    end
-                        </div>
+                        <!-- [수정] Mermaid.js 대신 정적 이미지(플레이스홀더) 사용 -->
+                        <img src="flow_scenario.png"
+                             alt="페이지 흐름도 다이어그램"
+                             class="diagram-image"
+                             onerror="this.alt='다이어그램 이미지 로드 실패'; this.src='https://placehold.co/800x600/f8f9fa/c92a2a?text=Image%20Load%20Failed';">
+                    
 
                         <h3>페이지별 통신 계약 (중요)</h3>
                         <p>
@@ -887,53 +862,6 @@ graph TD
     </div>
 
     <script>
-        // --- Mermaid 렌더링 함수 ---
-        function renderMermaid(targetTabId) {
-            try {
-                // 현재 렌더링할 Mermaid 다이어그램의 부모 탭(섹션)이 활성화되어 있는지 확인
-                const mermaidElement = document.getElementById('mermaid-diag-1');
-                const parentSection = mermaidElement.closest('.content-section');
-                
-                // [오류 수정] 
-                // 1. 렌더링할 다이어그램이 포함된 탭이 활성화되었을 때만 렌더링
-                // 2. 또는, targetTabId가 'tab3'일 때 (즉, 탭 3이 방금 클릭되었을 때) 렌더링
-                if (parentSection.classList.contains('active') || targetTabId === 'tab3') {
-                    const isDark = document.documentElement.classList.contains('dark');
-                    
-                    mermaid.initialize({
-                        startOnLoad: false, 
-                        theme: isDark ? 'dark' : 'base',
-                        themeVariables: {
-                            primaryColor: isDark ? '#4dabf7' : '#0d6efd',
-                            lineColor: isDark ? '#aaa' : '#333',
-                            textColor: isDark ? '#f1f1f1' : '#222222',
-                            mainBkg: isDark ? '#2d2d2d' : '#f8f9fa',
-                            nodeBorder: isDark ? '#4dabf7' : '#0d6efd',
-                        }
-                    });
-
-                    // [오류 수정] 렌더링 전, 이전에 렌더링된 SVG가 있다면 제거 (중복 렌더링 방지)
-                    const svg = mermaidElement.querySelector('svg');
-                    if (svg) {
-                        svg.remove();
-                    }
-                    mermaidElement.removeAttribute('data-processed');
-                    
-                    // 원본 Mermaid 텍스트 가져오기 (div의 innerHTML을 직접 사용)
-                    const mermaidCode = mermaidElement.innerHTML.trim();
-                    mermaid.render('mermaid-svg-1', mermaidCode, (svgCode) => {
-                        mermaidElement.innerHTML = svgCode;
-                    }, mermaidElement);
-                }
-            } catch (e) {
-                console.error("Mermaid 렌더링 오류:", e);
-                const mermaidElement = document.getElementById('mermaid-diag-1');
-                if(mermaidElement) {
-                    mermaidElement.innerHTML = "다이어그램 로딩 실패. 탭을 다시 클릭해주세요.";
-                }
-            }
-        }
-
         // --- 테마 전환 ---
         const themeToggle = document.getElementById('theme-toggle');
         const html = document.documentElement;
@@ -941,8 +869,7 @@ graph TD
         themeToggle.addEventListener('click', () => {
             html.classList.toggle('dark');
             localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
-            // 테마 변경 시 Mermaid 다이어그램도 다시 렌더링합니다.
-            renderMermaid('tab3'); // 테마 변경 시 tab3이 활성 상태가 아니어도 강제 렌더링 시도
+            // [수정] 다이어그램 이미지의 src를 변경할 필요는 없으므로 렌더링 호출 제거
         });
 
         // 저장된 테마 불러오기
@@ -973,11 +900,8 @@ graph TD
                 generateTOC();
                 // 탭 전환 시 스크롤 맨 위로
                 window.scrollTo(0, 0);
-
-                // [오류 수정] 탭 3이 클릭되면, Mermaid 렌더링 함수를 *다시* 호출
-                if (target === 'tab3') {
-                    renderMermaid('tab3');
-                }
+                
+                // [수정] Mermaid 관련 탭 클릭 로직 제거
             });
         });
 
@@ -1076,8 +1000,7 @@ graph TD
         // DOM이 완전히 로드된 후 스크립트 실행
         document.addEventListener('DOMContentLoaded', () => {
             generateTOC();
-            // 페이지 첫 로드 시 렌더링 (탭 1이 활성화되어 있으므로 Mermaid는 렌더링 X)
-            renderMermaid('tab1'); 
+            // [수정] Mermaid 초기화 및 렌더링 호출 제거
         });
     </script>
 </body>
