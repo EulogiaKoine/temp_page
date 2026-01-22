@@ -137,7 +137,7 @@
         <div class="access-label">Accessing to Talos 2</div>
     </div>
 
-    <div class="status-bar">
+    <!-- <div class="status-bar">
         <div class="status-item">
             <div class="dot" id="syncDot"></div>
             <span id="syncText">연결 중...</span>
@@ -146,7 +146,7 @@
             <span>Offset: <span id="offsetVal">0</span>ms</span>
         </div>
         <button class="sync-btn" onclick="syncWithServer()">SYNC NOW</button>
-    </div>
+    </div> -->
 
 <script>
     // 전역 상태
@@ -181,52 +181,8 @@
         return targetKST.getTime(); 
     }
 
-    // 서버 시간 동기화 (WorldTimeAPI 사용)
-    async function syncWithServer() {
-        syncDot.className = 'dot syncing';
-        syncText.innerText = '동기화 중...';
-        
-        try {
-            const startTick = performance.now();
-            
-            // 캐시 방지를 위해 타임스탬프 쿼리 추가
-            const response = await fetch(`https://worldtimeapi.org/api/timezone/Asia/Seoul?t=${Date.now()}`);
-            if (!response.ok) throw new Error('Network response was not ok');
-            
-            const data = await response.json();
-            const endTick = performance.now();
-            
-            // RTT (Round Trip Time) 계산 및 보정
-            // 서버 시간은 요청을 받은 시점의 시간이므로, 돌아오는 시간(RTT/2)을 더해야 현재 시간과 가까워짐
-            const rtt = endTick - startTick;
-            const serverTime = new Date(data.datetime).getTime() + (rtt / 2);
-            const localTime = Date.now();
-            
-            // 오차 계산
-            timeOffset = serverTime - localTime;
-            
-            // 다음 타겟 시간 재계산
-            nextTargetTime = calculateNextNoonKST(serverTime);
-
-            isSynced = true;
-            syncDot.className = 'dot active';
-            syncText.innerText = 'KST 동기화 완료';
-            offsetVal.innerText = Math.round(timeOffset);
-            
-            console.log(`[Sync] RTT: ${rtt.toFixed(2)}ms, Offset: ${timeOffset.toFixed(2)}ms`);
-
-        } catch (error) {
-            console.error('Sync failed:', error);
-            syncDot.className = 'dot error';
-            syncText.innerText = '동기화 실패 (로컬 기준)';
-            isSynced = false;
-            timeOffset = 0; // 실패 시 로컬 시간 사용
-            
-            // 로컬 시간 기준으로 타겟 설정
-            const now = Date.now();
-            nextTargetTime = calculateNextNoonKST(now);
-        }
-    }
+    const now = Date.now();
+    nextTargetTime = calculateNextNoonKST(now);
 
     function updateTimer() {
         const now = Date.now() + timeOffset; // 보정된 현재 시간
@@ -269,7 +225,7 @@
     }
 
     // 초기 실행
-    syncWithServer();
+    // syncWithServer();
     requestAnimationFrame(updateTimer);
 
     // 1분마다 재동기화하여 오차 누적 방지
