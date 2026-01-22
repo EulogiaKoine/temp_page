@@ -3,1005 +3,283 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UI 계층 개발 가이드</title>
-    <!-- Mermaid.js 라이브러리 제거 -->
+    <title>명일방주: 엔드필드 오픈 타이머</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;800&display=swap" rel="stylesheet">
     <style>
-        /* --- 기본 스타일 (다크 모드 포함) --- */
         :root {
-            --bg-color: #ffffff;
-            --text-color: #222222;
-            --primary-color: #0d6efd;
-            --primary-hover: #0b5ed7;
-            --nav-bg: #f8f9fa;
-            --nav-border: #dee2e6;
-            --code-bg: #f1f1f1;
-            --code-text: #222;
-            --border-color: #e0e0e0;
-            --toc-bg: #f8f9fa;
-            --toc-hover: #e9ecef;
-        }
-
-        html.dark {
-            --bg-color: #222222;
-            --text-color: #f1f1f1;
-            --primary-color: #4dabf7;
-            --primary-hover: #339af0;
-            --nav-bg: #333;
-            --nav-border: #444;
-            --code-bg: #333;
-            --code-text: #f1f1f1;
-            --border-color: #444;
-            --toc-bg: #2d2d2d;
-            --toc-hover: #3d3d3d;
-        }
-
-        *, *::before, *::after {
-            box-sizing: border-box;
+            --bg-color: #0d0d0d;
+            --text-color: #ffffff;
+            --accent-color: #00ff9d;
+            --danger-color: #ff4757;
+            --dim-color: #444;
         }
 
         body {
             margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-            line-height: 1.6;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             background-color: var(--bg-color);
             color: var(--text-color);
-            transition: background-color 0.2s, color 0.2s;
+            font-family: 'JetBrains Mono', monospace;
+            overflow: hidden;
+            user-select: none;
         }
 
-        .page-wrapper {
+        /* 메인 타이머 컨테이너 */
+        .timer-container {
             display: flex;
-            min-height: 100vh;
-        }
-
-        /* --- 좌측 목차 (TOC) 사이드바 --- */
-        .toc-sidebar {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 280px;
-            height: 100vh;
-            background-color: var(--toc-bg);
-            border-right: 1px solid var(--nav-border);
-            overflow-y: auto;
-            padding: 20px;
-            transition: transform 0.3s ease;
-            z-index: 100;
-        }
-
-        .toc-sidebar.hidden {
-            transform: translateX(-280px);
-        }
-
-        .toc-header {
-            display: flex;
-            justify-content: space-between;
+            flex-direction: column;
             align-items: center;
+            z-index: 10;
+        }
+
+        /* 시:분:초 */
+        .main-time {
+            /* 뷰포트 너비에 따라 글자 크기 유동적 조절 (최소 40px, 최대 18vw) */
+            font-size: clamp(3rem, 18vw, 12rem);
+            font-weight: 800;
+            line-height: 1;
+            font-variant-numeric: tabular-nums; /* 숫자 너비 고정으로 떨림 방지 */
+            letter-spacing: -0.05em;
+            text-align: center;
+        }
+
+        /* 밀리초 */
+        .milliseconds {
+            font-size: clamp(1.5rem, 6vw, 4rem);
+            color: var(--accent-color);
+            font-weight: 400;
+            margin-top: -10px;
+            font-variant-numeric: tabular-nums;
+            opacity: 0.9;
+        }
+
+        .access-label {
+            margin-top: 20px;
+            font-size: clamp(1rem, 2.4vw, 1.3rem);
+            color: #ffd700;
+            text-transform: uppercase;
+            letter-spacing: 0.4em;
+        }
+
+        /* 목표 시간 표시 */
+        .target-label {
             margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid var(--nav-border);
+            font-size: clamp(0.8rem, 2vw, 1.2rem);
+            color: var(--dim-color);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
         }
 
-        .toc-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--primary-color);
-            margin: 0;
-        }
-        
-        .toc-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .toc-item { margin: 0; }
-
-        .toc-link {
-            display: block;
-            padding: 8px 12px;
-            color: var(--text-color);
-            text-decoration: none;
-            border-radius: 6px;
-            transition: background-color 0.2s;
-            font-size: 14px;
-        }
-
-        .toc-link:hover {
-            background-color: var(--toc-hover);
-        }
-
-        .toc-link.active {
-            background-color: var(--primary-color);
-            color: white;
-            font-weight: 500;
-        }
-
-        .toc-item[data-level="2"] .toc-link {
-            padding-left: 12px;
-            font-weight: 600;
-        }
-        .toc-item[data-level="3"] .toc-link {
-            padding-left: 24px;
-            font-size: 13px;
-        }
-        .toc-item[data-level="4"] .toc-link {
-            padding-left: 36px;
-            font-size: 12px;
-            opacity: 0.8;
-        }
-
-        /* --- 메인 컨텐츠 --- */
-        .main-content {
-            flex: 1;
-            margin-left: 280px;
-            transition: margin-left 0.3s ease;
-        }
-
-        .main-content.expanded {
-            margin-left: 0;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        /* --- 모바일 반응형 --- */
-        .mobile-toc-toggle {
-            display: none;
-            position: fixed;
+        /* 하단 정보 바 */
+        .status-bar {
+            position: absolute;
             bottom: 20px;
-            right: 20px;
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            z-index: 99;
-            font-size: 24px;
-        }
-
-        @media (max-width: 768px) {
-            .toc-sidebar {
-                transform: translateX(-280px);
-            }
-            .toc-sidebar.visible {
-                transform: translateX(0);
-            }
-            .main-content {
-                margin-left: 0;
-            }
-            .mobile-toc-toggle {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-        }
-
-        /* --- 컨텐츠 스타일 --- */
-        header {
-            border-bottom: 2px solid var(--primary-color);
-            padding-bottom: 20px;
-            margin-bottom: 20px;
             display: flex;
-            justify-content: space-between;
+            gap: 20px;
+            font-size: 0.8rem;
+            color: #666;
             align-items: center;
         }
 
-        header h1 {
-            margin: 0;
-            color: var(--primary-color);
-        }
-
-        #theme-toggle {
-            cursor: pointer;
-            padding: 8px 12px;
-            border: 1px solid var(--nav-border);
-            background-color: var(--nav-bg);
-            border-radius: 8px;
-            font-size: 14px;
-        }
-        
-        /* 탭 네비게이션 */
-        nav {
+        .status-item {
             display: flex;
-            border-bottom: 2px solid var(--nav-border);
-            margin-bottom: 20px;
+            align-items: center;
+            gap: 6px;
         }
 
-        nav button {
-            padding: 12px 20px;
-            border: none;
-            background-color: transparent;
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--dim-color);
+        }
+
+        .dot.active { background-color: var(--accent-color); box-shadow: 0 0 8px var(--accent-color); }
+        .dot.error { background-color: var(--danger-color); }
+        .dot.syncing { background-color: #ffd700; animation: blink 1s infinite; }
+
+        @keyframes blink { 50% { opacity: 0.3; } }
+
+        /* 재동기화 버튼 */
+        .sync-btn {
+            background: transparent;
+            border: 1px solid #333;
+            color: #666;
+            padding: 5px 10px;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: 500;
-            color: var(--text-color);
-            border-bottom: 3px solid transparent;
-            transition: border-color 0.2s, color 0.2s;
+            font-family: inherit;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+        .sync-btn:hover {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
         }
 
-        nav button.active {
-            border-bottom-color: var(--primary-color);
-            color: var(--primary-color);
-        }
-
-        nav button:hover {
-            background-color: var(--nav-bg);
-        }
-
-        .content-section {
-            display: none;
-        }
-
-        .content-section.active {
-            display: block;
-        }
-
-        /* h2 ~ h4 (목차 생성 기준) */
-        h2 {
-            font-size: 2em;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
-            scroll-margin-top: 20px; /* 스크롤 시 헤더에 가려지지 않게 */
-        }
-        h3 {
-            font-size: 1.5em;
-            margin-top: 30px;
-            color: var(--primary-color);
-            scroll-margin-top: 20px;
-        }
-        h4 {
-            font-size: 1.2em;
-            margin-top: 24px;
-            margin-bottom: 8px;
-            font-weight: 600;
-            scroll-margin-top: 20px;
-        }
-
-        p, ul, ol {
-            font-size: 1.05em;
-            margin-bottom: 1.2em;
-            line-height: 1.7;
-        }
-        ul, ol { padding-left: 20px; }
-        li { margin-bottom: 10px; }
-        
-        blockquote {
-            border-left: 4px solid var(--primary-color);
-            padding: 10px 20px;
-            margin: 20px 0;
-            background-color: var(--nav-bg);
-            border-radius: 4px;
-        }
-        blockquote p { margin-bottom: 0.5em; }
-
-        /* 코드 스타일 (Java) */
-        code {
-            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-            background-color: var(--code-bg);
-            color: var(--code-text);
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 0.95em;
-        }
-        pre {
-            background-color: var(--code-bg);
-            color: var(--code-text);
-            padding: 1.5em;
-            border-radius: 8px;
-            overflow-x: auto;
-            font-size: 0.9em;
-        }
-        
-        .comment { color: #868e96; }
-        html.dark .comment { color: #868e96; }
-        .keyword { color: #d9480f; } /* (예: class, public, new) */
-        html.dark .keyword { color: #f76707; }
-        .string { color: #087f5b; }
-        html.dark .string { color: #2f9e44; }
-        .function { color: #3b5bdb; } /* (메서드명) */
-        html.dark .function { color: #4c6ef5; }
-        .type { color: #0b7285; } /* (클래스명, 타입) */
-        html.dark .type { color: #15aabf; }
-        
-        /* 다이어그램 이미지 스타일 */
-        .diagram-image {
-            width: 100%;
-            max-width: 700px;
-            height: auto;
-            display: block;
-            margin: 20px auto;
-            border: 1px solid var(--nav-border);
-            border-radius: 8px;
-            background-color: var(--nav-bg);
-            padding: 10px;
-        }
+        /* 완료 시 화면 효과 */
+        .finished .main-time { color: var(--accent-color); }
+        .finished .milliseconds { display: none; }
     </style>
 </head>
 <body>
-    <div class="page-wrapper">
-        <!-- Table of Contents Sidebar -->
-        <aside class="toc-sidebar" id="tocSidebar">
-            <div class="toc-header">
-                <h3 class="toc-title">📚 목차</h3>
-            </div>
-            <ul class="toc-list" id="tocList">
-                <!-- TOC items will be generated dynamically -->
-            </ul>
-        </aside>
 
-        <!-- Main Content -->
-        <div class="main-content" id="mainContent">
-            <div class="container">
-                <header>
-                    <h1>UI 계층 개발 가이드</h1>
-                    <button id="theme-toggle">테마 전환</button>
-                </header>
-
-                <nav>
-                    <button class="nav-tab active" data-target="tab1">1. AppPage와 4가지 도구</button>
-                    <button class="nav-tab" data-target="tab2">2. ui-kit 사용법</button>
-                    <button class="nav-tab" data-target="tab3">3. 페이지 전환 시나리오</button>
-                    <button class="nav-tab" data-target="tab4">4. 시나리오별 예제</button>
-                </nav>
-
-                <main id="mainContentArea">
-
-                    <!-- ====================================================== -->
-                    <!-- 탭 1: AppPage와 4가지 도구 -->
-                    <!-- ====================================================== -->
-                    <section id="tab1" class="content-section active">
-                        <h2>1. AppPage: 모든 화면의 기초</h2>
-                        <p>
-                            이 프로젝트의 모든 UI 화면(페이지)은 `AppPage`라는 클래스를 상속받아(extends) 만든다.
-                            `AppPage`는 화면 개발에 필요한 **4가지 핵심 도구**를 제공한다.
-                        </p>
-                        <p>
-                            개발자는 이 4가지 도구 사용법만 익히면 된다.
-                        </p>
-
-                        <h3>`AppPage`의 4가지 도구</h3>
-                        
-                        <h4>1. ServiceContext (매니저 접근)</h4>
-                        <p>
-                            `ServiceContext`는 `UserManager`, `TourCatalog` 등 비즈니스 로직이 담긴 매니저 객체들의 보관함이다.
-                            `AppPage`의 생성자에서 받아, 필요한 매니저를 꺼내 사용한다.
-                        </p>
-<pre><code><span class="keyword">public</span> <span class="keyword">class</span> <span class="type">LoginPage</span> <span class="keyword">extends</span> <span class="type">AppPage</span> {
-    <span class="comment">// 1. 사용할 매니저를 필드로 선언</span>
-    <span class="keyword">private</span> <span class="type">UserManager</span> userManager;
-    <span class="keyword">private</span> <span class="type">SessionManager</span> sessionManager;
-
-    <span class="keyword">public</span> <span class="type">LoginPage</span>(<span class="type">ServiceContext</span> context) {
-        <span class="keyword">super</span>(context); <span class="comment">// 2. 부모 생성자에 context 전달 (필수)</span>
-
-        <span class="comment">// 3. context에서 필요한 매니저 인스턴스를 꺼냄</span>
-        <span class="keyword">this</span>.userManager = context.<span class="function">get</span>(<span class="type">UserManager</span>.<span class="keyword">class</span>);
-        <span class="keyword">this</span>.sessionManager = context.<span class="function">get</span>(<span class="type">SessionManager</span>.<span class="keyword">class</span>);
-        
-        <span class="function">initUI</span>(); <span class="comment">// 4. UI 초기화</span>
-    }
-    <span class="comment">// ...</span>
-}
-</code></pre>
-                        
-                        <h4>2. runAsyncTask (시간이 걸리는 작업)</h4>
-                        <p>
-                            DB 조회, API 호출, 파일 읽기 등 **시간이 걸리는 작업**은 <b>반드시 `runAsyncTask` 안에서 처리</b>해야 한다.
-                            이것을 사용하면 작업 중에도 앱(UI)이 멈추지 않는다.
-                        </p>
-                        <p>
-                            `runAsyncTask`는 3개의 "작업 내용(람다식)"을 전달받는다.
-                        </p>
-<pre><code><span class="function">runAsyncTask</span>(
-    () -> {
-        <span class="comment">// 1. 작업 내용 (백그라운드)</span>
-        <span class="comment">// userManager.login()이 Long 타입의 userId를 반환한다고 가정</span>
-        <span class="keyword">return</span> userManager.<span class="function">login</span>(<span class="string">"id"</span>, <span class="string">"pw"</span>);
-    },
-    (userId) -> {
-        <span class="comment">// 2. 성공 시 (UI 업데이트)</span>
-        <span class="comment">// 1번 작업이 성공하면, 결과(userId)를 받아 실행됨</span>
-        sessionManager.<span class="function">login</span>((<span class="type">Long</span>) userId);
-        <span class="function">navigateTo</span>(<span class="string">"tourList"</span>);
-    },
-    (error) -> {
-        <span class="comment">// 3. 실패 시 (UI 업데이트)</span>
-        <span class="comment">// 1번 작업이 실패하면, 에러(error)를 받아 실행됨</span>
-        <span class="type">JOptionPane</span>.<span class="function">showMessageDialog</span>(<span class="keyword">this</span>, <span class="string">"로그인 실패"</span>);
-    }
-);
-</code></pre>
-
-                        <h4>3. navigateTo (페이지 이동)</h4>
-                        <p>
-                            다른 페이지로 화면을 전환할 때 사용한다.
-                        </p>
-<pre><code><span class="comment">// 1. 단순 페이지 이동</span>
-<span class="function">navigateTo</span>(<span class="string">"tourList"</span>);
-
-<span class="comment">// 2. 데이터를 전달하며 페이지 이동 (ID가 123L인 상세 페이지로)</span>
-<span class="type">Long</span> selectedTourId = 123L;
-<span class="function">navigateTo</span>(<span class="string">"tourDetail"</span>, selectedTourId);
-</code></pre>
-
-                        <h4>4. AppEventBus (이벤트 발행/구독)</h4>
-                        <p>
-                            다른 페이지에 "소식(이벤트)"을 전할 때 사용한다.
-                        </p>
-<pre><code><span class="comment">// (ReviewWritePage - 리뷰 작성 페이지)</span>
-<span class="keyword">private</span> <span class="type">void</span> <span class="function">onSubmitClick</span>() {
-    <span class="comment">// ... 리뷰 등록 로직 ...</span>
-    <span class="comment">// 1. "리뷰가 추가되었다"는 이벤트를 앱 전체에 방송(발행)</span>
-    <span class="function">publishEvent</span>(<span class="keyword">new</span> <span class="type">ReviewAddedEvent</span>(newReview));
-}
-
-<span class="comment">// (ReservationListPage - 예약 목록 페이지)</span>
-<span class="keyword">public</span> <span class="type">ReservationListPage</span>(<span class="type">ServiceContext</span> context) {
-    <span class="keyword">super</span>(context);
-    <span class="comment">// 2. "리뷰 추가" 이벤트를 구독</span>
-    <span class="function">subscribeEvent</span>(<span class="type">ReviewAddedEvent</span>.<span class="keyword">class</span>, event -> {
-        <span class="comment">// 다른 페이지에서 리뷰가 추가된 것을 감지</span>
-        <span class="function">loadReservations</span>(); <span class="comment">// 목록 새로고침</span>
-    });
-}
-</code></pre>
-                        
-                        <h3>`AppPage`의 2가지 필수 규칙</h3>
-                        <p>
-                            `AppPage`를 상속받으면, 2가지 메서드를 <b>반드시 구현(Override)</b>해야 한다.
-                        </p>
-<pre><code><span class="keyword">public</span> <span class="keyword">class</span> <span class="type">TourListPage</span> <span class="keyword">extends</span> <span class="type">AppPage</span> {
-    
-    <span class="comment">// ... (생성자) ...</span>
-
-    <span class="comment">/**
-     * 1. (필수) 이 페이지의 고유 ID를 반환한다.
-     * navigateTo("tourList") 호출 시 이 ID가 사용된다.
-     */</span>
-    @<span class="type">Override</span>
-    <span class="keyword">public</span> <span class="type">String</span> <span class="function">getPageId</span>() {
-        <span class="keyword">return</span> <span class="string">"tourList"</span>;
-    }
-
-    <span class="comment">/**
-     * 2. (필수) 이 페이지가 화면에 보일 때마다 호출된다.
-     * @param contextData navigateTo로 전달된 데이터 (없으면 null)
-     */</span>
-    @<span class="type">Override</span>
-    <span class="keyword">public</span> <span class="type">void</span> <span class="function">onPageShown</span>(<span class="type">Object</span> contextData) {
-        <span class="comment">// 데이터를 로드하는 로직(runAsyncTask)은 보통 여기서 호출한다.</span>
-        <span class="function">loadTours</span>(); 
-    }
-    
-    <span class="keyword">private</span> <span class="type">void</span> <span class="function">loadTours</span>() { <span class="comment">/* ... runAsyncTask ... */</span> }
-}
-</code></pre>
-                    </section>
-
-                    <!-- ====================================================== -->
-                    <!-- 탭 2: ui-kit 사용법 -->
-                    <!-- ====================================================== -->
-                    <section id="tab2" class="content-section">
-                        <h2>2. ui-kit: 화면을 조립하는 부품</h2>
-                        <p>
-                            `ui-kit` 패키지는 화면을 구성하는 "표준 부품" 세트다.
-                        </p>
-                        <blockquote>
-                            <p><b>규칙:</b> 화면(AppPage)을 만들 때, UI는 <b>반드시 `ui-kit`의 컴포넌트</b>(<code>AppButton</code>, <code>AppLabel</code> 등)를 사용해 조립한다.</p>
-                        </blockquote>
-                        <p>
-                            `ui-kit` 컴포넌트의 사용법은 `JButton`, `JLabel` 등 기존 Swing 컴포넌트와 동일하다.
-                            앱의 모든 폰트, 색상, 스타일이 이미 적용되어 있다.
-                        </p>
-
-                        <h3>기본 부품: AppLabel, AppButton, AppTextField</h3>
-<pre><code><span class="comment">// 1. 레이블 (타입 지정 가능)</span>
-<span class="type">AppLabel</span> title = <span class="keyword">new</span> <span class="type">AppLabel</span>(<span class="string">"환영합니다"</span>, <span class="type">AppLabel</span>.<span class="type">LabelType</span>.TITLE);
-<span class="type">AppLabel</span> normalText = <span class="keyword">new</span> <span class="type">AppLabel</span>(<span class="string">"ID:"</span>);
-
-<span class="comment">// 2. 텍스트 필드</span>
-<span class="type">AppTextField</span> idField = <span class="keyword">new</span> <span class="type">AppTextField</span>(20);
-
-<span class="comment">// 3. 버튼</span>
-<span class="type">AppButton</span> loginButton = <span class="keyword">new</span> <span class="type">AppButton</span>(<span class="string">"로그인"</span>);
-
-<span class="comment">// 4. 사용법은 기존과 동일</span>
-loginButton.<span class="function">addActionListener</span>(e -> {
-    <span class="type">String</span> id = idField.<span class="function">getText</span>();
-    <span class="comment">// ...</span>
-});
-
-<span class="comment">// 5. 패널에 추가</span>
-<span class="keyword">this</span>.<span class="function">add</span>(title);
-<span class="keyword">this</span>.<span class="function">add</span>(normalText);
-<span class="keyword">this</span>.<span class="function">add</span>(idField);
-<span class="keyword">this</span>.<span class="function">add</span>(loginButton);
-</code></pre>
-
-                        <h3>레이아웃 부품: AppPanel, AppTitledPanel</h3>
-                        <p>
-                            컴포넌트들을 그룹화하여 배치할 때 사용한다. HTML의 `&lt;div&gt;`와 비슷하다.
-                        </p>
-                        
-                        <h4>AppPanel (투명 `div`)</h4>
-                        <p>
-                            여러 컴포넌트를 묶기 위한 투명한 패널이다. 레이아웃을 잡는 용도로만 사용한다.
-                        </p>
-                        
-                        <h4>AppTitledPanel (제목 있는 `div`)</h4>
-                        <p>
-                            "사용자 정보", "검색 조건"처럼 제목이 있는 경계선으로 컴포넌트들을 묶을 때 사용한다.
-                        </p>
-<pre><code><span class="comment">// (AppPage 내부에서...)</span>
-<span class="keyword">this</span>.<span class="function">setLayout</span>(<span class="keyword">new</span> <span class="type">BorderLayout</span>(<span class="number">10</span>, <span class="number">10</span>));
-
-<span class="comment">// --- 1. 검색 영역 (제목 있음) ---</span>
-<span class="type">AppTitledPanel</span> searchPanel = <span class="keyword">new</span> <span class="type">AppTitledPanel</span>(<span class="string">"검색 조건"</span>);
-searchPanel.<span class="function">setLayout</span>(<span class="keyword">new</span> <span class="type">FlowLayout</span>(<span class="type">FlowLayout</span>.LEFT));
-searchPanel.<span class="function">add</span>(<span class="keyword">new</span> <span class="type">AppLabel</span>(<span class="string">"이름:"</span>));
-searchPanel.<span class="function">add</span>(<span class="keyword">new</span> <span class="type">AppTextField</span>(<span class="number">15</span>));
-searchPanel.<span class="function">add</span>(<span class="keyword">new</span> <span class="type">AppButton</span>(<span class="string">"검색"</span>));
-
-<span class="keyword">this</span>.<span class="function">add</span>(searchPanel, <span class="type">BorderLayout</span>.NORTH);
-
-<span class="comment">// --- 2. 버튼 영역 (단순 그룹핑) ---</span>
-<span class="comment">// AppPanel은 배경이 투명하다.</span>
-<span class="type">AppPanel</span> buttonPanel = <span class="keyword">new</span> <span class="type">AppPanel</span>(<span class="keyword">new</span> <span class="type">FlowLayout</span>(<span class="type">FlowLayout</span>.RIGHT));
-buttonPanel.<span class="function">add</span>(<span class="keyword">new</span> <span class="type">AppButton</span>(<span class="string">"저장"</span>));
-buttonPanel.<span class="function">add</span>(<span class="keyword">new</span> <span class="type">AppButton</span>(<span class="string">"취소"</span>));
-
-<span class="keyword">this</span>.<span class="function">add</span>(buttonPanel, <span class="type">BorderLayout</span>.SOUTH);
-</code></pre>
-
-                        <h3>편의 부품: AppTextArea</h3>
-                        <p>
-                            여러 줄 텍스트 입력 시 사용한다. <b>스크롤바가 자동으로 내장</b>되어 있어 편리하다.
-                        </p>
-<pre><code><span class="comment">// AppTextArea는 스크롤바가 포함되어 있다.</span>
-<span class="type">AppTextArea</span> newArea = <span class="keyword">new</span> <span class="type">AppTextArea</span>();
-panel.<span class="function">add</span>(newArea); <span class="comment">// 1줄로 끝.</span>
-
-<span class="comment">// 사용법은 동일</span>
-newArea.<span class="function">setText</span>(<span class="string">"자동으로 줄바꿈 및 스크롤이 적용됩니다."</span>);
-<span class="type">String</span> text = newArea.<span class="function">getText</span>();
-</code></pre>
-
-                        <h3>기타 부품</h3>
-                        <p>
-                            `AppComboBox` (드롭다운), `AppProgressBar` (진행률) 등도 모두 기존 사용법과 동일하며,
-                            앱 스타일이 자동 적용된다.
-                        </p>
-                    </section>
-                    
-                    <!-- ====================================================== -->
-                    <!-- 탭 3: 페이지 전환 시나리오 -->
-                    <!-- ====================================================== -->
-                    <section id="tab3" class="content-section">
-                        <h2>3. 페이지 전환 시나리오 (팀 규약)</h2>
-                        <p>
-                            여러 페이지를 병렬로 개발하기 위해, 페이지 간 통신 "규약"을 정의한다.
-                            이 규약만 지키면, 다른 사람의 코드를 몰라도 협업이 가능하다.
-                        </p>
-
-                        <h3>페이지 흐름도 (Page Flow Diagram)</h3>
-                        <p>
-                            아래 다이어그램은 우리 앱의 전체 페이지 전환 흐름을 정의한다.
-                        </p>
-                        
-                        <!-- [수정] Mermaid.js 대신 정적 이미지(플레이스홀더) 사용 -->
-                        <img src="flow_scenario.png"
-                             alt="페이지 흐름도 다이어그램"
-                             class="diagram-image"
-                             onerror="this.alt='다이어그램 이미지 로드 실패'; this.src='https://placehold.co/800x600/f8f9fa/c92a2a?text=Image%20Load%20Failed';">
-                    
-
-                        <h3>페이지별 통신 계약 (중요)</h3>
-                        <p>
-                            아래 표는 각 페이지 개발자가 반드시 지켜야 할 입/출력 명세다.
-                        </p>
-                        <table style="width:100%; border-collapse: collapse; border: 1px solid var(--border-color);">
-                            <tr style="background-color: var(--toc-bg);">
-                                <th style="padding: 10px; border: 1px solid var(--border-color);">페이지 ID</th>
-                                <th style="padding: 10px; border: 1px solid var(--border-color);">수신 데이터 (onPageShown)</th>
-                                <th style="padding: 10px; border: 1px solid var(--border-color);">발신 데이터 (navigateTo)</th>
-                            </tr>
-                            <tr>
-                                <td style="padding: 10px; border: 1px solid var(--border-color);"><code>login</code></td>
-                                <td style="padding: 10px; border: 1px solid var(--border-color);"><code>null</code></td>
-                                <td style="padding: 10px; border: 1px solid var(--border-color);"><code>navigateTo("tourList")</code></td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 10px; border: 1px solid var(--border-color);"><code>tourList</code></td>
-                                <td style="padding: 10px; border: 1px solid var(--border-color);"><code>null</code></td>
-                                <td style="padding: 10px; border: 1px solid var(--border-color);"><code>navigateTo("tourDetail", (Long) packageId)</code></td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 10px; border: 1px solid var(--border-color);"><code>tourDetail</code></td>
-                                <td style="padding: 10px; border: 1px solid var(--border-color);"><b><code>(Long) packageId</code></b></td>
-                                <td style="padding: 10px; border: 1px solid var(--border-color);"><code>navigateTo("reservationList")</code></td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 10px; border: 1px solid var(--border-color);"><code>reservationList</code></td>
-                                <td style="padding: 10px; border: 1px solid var(--border-color);"><code>null</code></td>
-                                <td style="padding: 10px; border: 1px solid var(--border-color);"><code>navigateTo("tourDetail", (Long) packageId)</code><br><code>navigateTo("reviewWrite", (Long) packageId)</code></td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 10px; border: 1px solid var(--border-color);"><code>reviewWrite</code></td>
-                                <td style="padding: 10px; border: 1px solid var(--border-color);"><b><code>(Long) packageId</code></b></td>
-                                <td style="padding: 10px; border: 1px solid var(--border-color);"><code>navigateTo("tourDetail", (Long) packageId)</code></td>
-                            </tr>
-                        </table>
-                    </section>
-
-                    <!-- ====================================================== -->
-                    <!-- 탭 4: 시나리오별 예제 -->
-                    <!-- ====================================================== -->
-                    <section id="tab4" class="content-section">
-                        <h2>4. 시나리오별 예제</h2>
-                        <p>
-                            앞서 정의한 규약과 도구를 사용해 실제 시나리오를 구현하는 예제다.
-                            개발자는 자신의 담당 페이지에 해당하는 코드 스니펫을 참고한다.
-                        </p>
-
-                        <h3>전역 규칙: 로그인 상태 확인</h3>
-                        <p>
-                            <code>LoginPage</code>를 제외한 모든 `AppPage`는 `onPageShown`의 가장 처음에
-                            로그인 상태를 확인하는 코드를 추가해야 한다.
-                        </p>
-<pre><code><span class="keyword">private</span> <span class="type">SessionManager</span> sessionManager;
-
-<span class="keyword">public</span> <span class="type">MyPage</span>(<span class="type">ServiceContext</span> context) {
-    <span class="keyword">super</span>(context);
-    <span class="keyword">this</span>.sessionManager = context.<span class="function">get</span>(<span class="type">SessionManager</span>.<span class="keyword">class</span>);
-    <span class="comment">// ...</span>
-}
-
-@<span class="type">Override</span>
-<span class="keyword">public</span> <span class="type">void</span> <span class="function">onPageShown</span>(<span class="type">Object</span> contextData) {
-    <span class="comment">// [로그인 확인]</span>
-    <span class="keyword">if</span> (!sessionManager.<span class="function">isLoggedIn</span>()) {
-        <span class="function">navigateTo</span>(<span class="string">"login"</span>); <span class="comment">// 로그인 안됐으면 login 페이지로</span>
-        <span class="keyword">return</span>; <span class="comment">// 현재 페이지의 나머지 로직 실행 중단</span>
-    }
-
-    <span class="comment">// (로그인 보장) ... 페이지 로드 로직 ...</span>
-    <span class="function">loadMyData</span>();
-}
-</code></pre>
-
-                        <h3>시나리오 1: `LoginPage`</h3>
-                        <p>로그인 버튼 클릭 시 `runAsyncTask`로 `UserManager`를 호출하고, 성공 시 `SessionManager`에 등록 후 `MapsTo`로 메인 페이지(`tourList`)로 이동한다.</p>
-<pre><code><span class="comment">// (LoginPage 내부)</span>
-<span class="keyword">private</span> <span class="type">void</span> <span class="function">onLoginButtonClick</span>() {
-    <span class="type">String</span> id = idField.<span class="function">getText</span>();
-    <span class="type">String</span> pw = pwField.<span class="function">getText</span>();
-    
-    <span class="function">runAsyncTask</span>(
-        () -> userManager.<span class="function">checkPassword</span>(id, pw), <span class="comment">// 1. 작업 내용 (백그라운드)</span>
-        (userId) -> {
-            <span class="comment">// 2. 성공 시 (UI 업데이트)</span>
-            sessionManager.<span class="function">login</span>((<span class="type">Long</span>) userId);
-            <span class="function">navigateTo</span>(<span class="string">"tourList"</span>); <span class="comment">// "tourList"로 이동</span>
-        },
-        (error) -> { <span class="comment">/* 3. 실패 시: 로그인 실패 메시지 표시 */</span> }
-    );
-}
-</code></pre>
-
-                        <h3>시나리오 2: `TourListPage` (목록)</h3>
-                        <p>`onPageShown`에서 `tourCatalog.getAllTours()`를 비동기로 호출해 목록을 그린다. 상세보기 버튼 클릭 시 `MapsTo`로 `tourDetail`에 `packageId`를 전달한다.</p>
-<pre><code><span class="comment">// (TourListPage 내부)</span>
-@<span class="type">Override</span>
-<span class="keyword">public</span> <span class="type">void</span> <span class="function">onPageShown</span>(<span class="type">Object</span> contextData) {
-    <span class="keyword">if</span> (!sessionManager.<span class="function">isLoggedIn</span>()) { <span class="function">navigateTo</span>(<span class="string">"login"</span>); <span class="keyword">return</span>; }
-
-    <span class="comment">// 페이지가 보일 때마다 투어 목록 로드</span>
-    <span class="function">loadTours</span>();
-}
-
-<span class="keyword">private</span> <span class="type">void</span> <span class="function">loadTours</span>() {
-    <span class="function">runAsyncTask</span>(
-        () -> tourCatalog.<span class="function">getAllTours</span>(),
-        (tours) -> { <span class="comment">/* 2. 성공 시: (List&lt;TourPackage&gt;)tours로 JList 그리기 */</span> },
-        (error) -> { <span class="comment">/* 3. 실패 시: 에러 메시지 표시 */</span> }
-    );
-}
-
-<span class="comment">// (JTable 또는 버튼의 클릭 리스너 내부)</span>
-<span class="keyword">private</span> <span class="type">void</span> <span class="function">onDetailViewClick</span>() {
-    <span class="type">Long</span> selectedId = <span class="comment">/* ... JTable에서 선택된 packageId ... */</span>;
-    <span class="function">navigateTo</span>(<span class="string">"tourDetail"</span>, selectedId); <span class="comment">// "tourDetail"로 packageId 전달</span>
-}
-</code></pre>
-
-                        <h3>시나리오 3: `TourDetailPage` (상세)</h3>
-                        <p>`onPageShown`에서 `(Long) contextData`로 `packageId`를 받는다. 이 ID로 `tourCatalog`와 `reviewManager`를 비동기 호출해 상세 정보를 그린다.</p>
-<pre><code><span class="comment">// (TourDetailPage 내부)</span>
-<span class="keyword">private</span> <span class="type">Long</span> currentPackageId;
-
-@<span class="type">Override</span>
-<span class="keyword">public</span> <span class="type">String</span> <span class="function">getPageId</span>() { <span class="keyword">return</span> <span class="string">"tourDetail"</span>; }
-
-@<span class="type">Override</span>
-<span class="keyword">public</span> <span class="type">void</span> <span class="function">onPageShown</span>(<span class="type">Object</span> contextData) {
-    <span class="keyword">if</span> (!sessionManager.<span class="function">isLoggedIn</span>()) { <span class="function">navigateTo</span>(<span class="string">"login"</span>); <span class="keyword">return</span>; }
-
-    <span class="comment">// 전달받은 packageId 확인</span>
-    <span class="keyword">if</span> (contextData <span class="keyword">instanceof</span> <span class="type">Long</span>) {
-        <span class="keyword">this</span>.currentPackageId = (<span class="type">Long</span>) contextData;
-        <span class="function">loadPageData</span>(<span class="keyword">this</span>.currentPackageId);
-    } <span class="keyword">else</span> {
-        <span class="comment">/* ... 잘못된 접근 처리 ... */</span>
-    }
-}
-
-<span class="keyword">private</span> <span class="type">void</span> <span class="function">loadPageData</span>(<span class="type">Long</span> packageId) {
-    <span class="comment">// 1. 투어 상세 정보 로드</span>
-    <span class="function">runAsyncTask</span>(
-        () -> tourCatalog.<span class="function">getTourById</span>(packageId),
-        (tour) -> { <span class="comment">/* 2. 성공 시: (TourPackage)tour로 상세 정보 UI 채우기 */</span> },
-        (error) -> { <span class="comment">/* 3. 실패 시 ... */</span> }
-    );
-    
-    <span class="comment">// 2. 리뷰 정보 로드</span>
-    <span class="function">runAsyncTask</span>(
-        () -> reviewManager.<span class="function">getReviewsByTour</span>(packageId),
-        (reviews) -> { <span class="comment">/* 2. 성공 시: (List&lt;Review&gt;)reviews로 리뷰 목록 UI 채우기 */</span> },
-        (error) -> { <span class="comment">/* 3. 실패 시 ... */</span> }
-    );
-}
-
-<span class="comment">// "예약 버튼" 클릭 리스너</span>
-<span class="keyword">private</span> <span class="type">void</span> <span class="function">onReserveClick</span>() {
-    <span class="type">Long</span> userId = sessionManager.<span class="function">getCurrentUserId</span>();
-    
-    <span class="function">runAsyncTask</span>(
-        () -> reservationManager.<span class="function">reserve</span>(userId, <span class="keyword">this</span>.currentPackageId, <span class="comment">/* ... 날짜 ... */</span>),
-        (reservation) -> {
-            <span class="comment">// 2. 성공 시: "reservationList"로 이동</span>
-            <span class="function">navigateTo</span>(<span class="string">"reservationList"</span>); 
-        },
-        (error) -> { <span class="comment">/* 3. 실패 시: (예: "이미 예약된 상품") 메시지 표시 */</span> }
-    );
-}
-</code></pre>
-
-                        <h3>시나리오 4: `ReservationListPage` (예약 목록)</h3>
-                        <p>`onPageShown`에서 `sessionManager`의 `userId`로 `reservationManager.getListByUserId`를 호출한다. "리뷰" 버튼은 `MapsTo("reviewWrite", packageId)`를, "취소" 버튼은 `reservationManager.cancel` 후 `onPageShown(null)`을 호출해 새로고침한다.</p>
-<pre><code><span class="comment">// (ReservationListPage 내부)</span>
-@<span class="type">Override</span>
-<span class="keyword">public</span> <span class="type">String</span> <span class="function">getPageId</span>() { <span class="keyword">return</span> <span class="string">"reservationList"</span>; }
-
-@<span class="type">Override</span>
-<span class="keyword">public</span> <span class="type">void</span> <span class="function">onPageShown</span>(<span class="type">Object</span> contextData) {
-    <span class="keyword">if</span> (!sessionManager.<span class="function">isLoggedIn</span>()) { <span class="function">navigateTo</span>(<span class="string">"login"</span>); <span class="keyword">return</span>; }
-    <span class="function">loadReservations</span>(); <span class="comment">// 목록 로드</span>
-}
-
-<span class="keyword">private</span> <span class="type">void</span> <span class="function">loadReservations</span>() {
-    <span class="type">Long</span> userId = sessionManager.<span class="function">getCurrentUserId</span>();
-    <span class="function">runAsyncTask</span>(
-        () -> reservationManager.<span class="function">getListByUserId</span>(userId),
-        (reservations) -> {
-            <span class="comment">/* 2. 성공 시: (List&lt;Reservation&gt;)reservations로 목록 그리기 */</span>
-            <span class="comment">/* (이때 "완료" 상태인지 확인하여 "리뷰" / "취소" 버튼 노출 결정) */</span>
-        },
-        (error) -> { <span class="comment">/* 3. 실패 시 ... */</span> }
-    );
-}
-
-<span class="comment">// "취소" 버튼 클릭 리스너</span>
-<span class="keyword">private</span> <span class="type">void</span> <span class="function">onCancelClick</span>(<span class="type">Long</span> reservationId) {
-    <span class="function">runAsyncTask</span>(
-        () -> reservationManager.<span class="function">cancel</span>(reservationId),
-        (success) -> {
-            <span class="comment">// 2. 성공 시: 새로고침</span>
-            <span class="function">onPageShown</span>(<span class="keyword">null</span>);
-        },
-        (error) -> { <span class="comment">/* 3. 실패 시: 취소 실패 메시지 */</span> }
-    );
-}
-
-<span class="comment">// "리뷰" 버튼 클릭 리스너</span>
-<span class="keyword">private</span> <span class="type">void</span> <span class="function">onReviewClick</span>(<span class="type">Long</span> packageId) {
-    <span class="function">navigateTo</span>(<span class="string">"reviewWrite"</span>, packageId); <span class="comment">// "reviewWrite"로 packageId 전달</span>
-}
-</code></pre>
-                    
-                        <h3>시나리오 5: `ReviewWritePage`</h3>
-                        <p>`onPageShown`에서 `(Long) contextData`로 `packageId`를 받는다. "완료" 버튼 클릭 시 `reviewManager.writeReview`를 호출하고, 성공 시 `MapsTo`로 `tourDetail`에 `packageId`를 다시 전달하여 상세 페이지로 복귀한다.</p>
-<pre><code><span class="comment">// (ReviewWritePage 내부)</span>
-<span class="keyword">private</span> <span class="type">Long</span> currentPackageId;
-
-@<span class="type">Override</span>
-<span class="keyword">public</span> <span class="type">String</span> <span class="function">getPageId</span>() { <span class="keyword">return</span> <span class="string">"reviewWrite"</span>; }
-
-@<span class="type">Override</span>
-<span class="keyword">public</span> <span class="type">void</span> <span class="function">onPageShown</span>(<span class="type">Object</span> contextData) {
-    <span class="keyword">if</span> (!sessionManager.<span class="function">isLoggedIn</span>()) { <span class="function">navigateTo</span>(<span class="string">"login"</span>); <span class="keyword">return</span>; }
-
-    <span class="comment">// 전달받은 packageId 확인</span>
-    <span class="keyword">if</span> (contextData <span class="keyword">instanceof</span> <span class="type">Long</span>) {
-        <span class="keyword">this</span>.currentPackageId = (<span class="type">Long</span>) contextData;
-    } <span class="keyword">else</span> {
-        <span class="comment">/* ... 잘못된 접근 처리 ... */</span>
-    }
-}
-
-<span class="comment">// "완료" 버튼 클릭 리스너</span>
-<span class="keyword">private</span> <span class="type">void</span> <span class="function">onSubmitClick</span>() {
-    <span class="type">Long</span> userId = sessionManager.<span class="function">getCurrentUserId</span>();
-    <span class="type">int</span> rating = <span class="comment">/* ... 별점 ... */</span>;
-    <span class="type">String</span> content = <span class="comment">/* ... AppTextArea ... */</span>;
-    
-    <span class="function">runAsyncTask</span>(
-        () -> reviewManager.<span class="function">writeReview</span>(userId, <span class="keyword">this</span>.currentPackageId, rating, content),
-        (review) -> {
-            <span class="comment">// 2. 성공 시: "tourDetail"로 복귀</span>
-            <span class="function">navigateTo</span>(<span class="string">"tourDetail"</span>, <span class="keyword">this</span>.currentPackageId);
-        },
-        (error) -> { <span class="comment">/* 3. 실패 시: 리뷰 등록 실패 메시지 */</span> }
-    );
-}
-</code></pre>
-                    </section>
-
-                </main>
-            </div>
-        </div>
-
-        <!-- Mobile TOC Toggle Button -->
-        <button class="mobile-toc-toggle" id="mobileTocToggle">☰</button>
+    <div class="timer-container">
+        <div class="target-label">오픈_ 12:00 PM (UTC+9)</div>
+        <div class="main-time" id="displayTime">--:--:--</div>
+        <div class="milliseconds" id="displayMs">.000</div>
+        <div class="access-label">Accessing to Talos 2</div>
     </div>
 
-    <script>
-        // --- 테마 전환 ---
-        const themeToggle = document.getElementById('theme-toggle');
-        const html = document.documentElement;
+    <div class="status-bar">
+        <div class="status-item">
+            <div class="dot" id="syncDot"></div>
+            <span id="syncText">연결 중...</span>
+        </div>
+        <div class="status-item">
+            <span>Offset: <span id="offsetVal">0</span>ms</span>
+        </div>
+        <button class="sync-btn" onclick="syncWithServer()">SYNC NOW</button>
+    </div>
+
+<script>
+    // 전역 상태
+    let timeOffset = 0; // 서버 시간과 로컬 시간의 차이 (ms)
+    let isSynced = false;
+    let nextTargetTime = 0;
+    
+    const displayTimeEl = document.getElementById('displayTime');
+    const displayMsEl = document.getElementById('displayMs');
+    const syncDot = document.getElementById('syncDot');
+    const syncText = document.getElementById('syncText');
+    const offsetVal = document.getElementById('offsetVal');
+
+    // KST(UTC+9) 기준 다음 12:00 계산
+    function calculateNextNoonKST(nowServerTime) {
+        // 현재 서버 시간(UTC 기준 timestamp)을 KST Date 객체로 변환 논리 적용
+        const kstOffset = 9 * 60 * 60 * 1000;
+        const nowKST = new Date(nowServerTime + kstOffset);
         
-        themeToggle.addEventListener('click', () => {
-            html.classList.toggle('dark');
-            localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
-            // [수정] 다이어그램 이미지의 src를 변경할 필요는 없으므로 렌더링 호출 제거
-        });
-
-        // 저장된 테마 불러오기
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') {
-            html.classList.add('dark');
+        // 오늘 12:00 KST 생성
+        const targetKST = new Date(nowKST);
+        targetKST.setUTCHours(12 - 9, 0, 0, 0); // KST 12시는 UTC 03시
+        
+        // 이미 12시가 지났다면 내일 12시로 설정
+        if (nowKST.getTime() >= targetKST.getTime()) {
+            targetKST.setDate(targetKST.getDate() + 1);
         }
 
-        // --- 탭 전환 로직 ---
-        const navTabs = document.querySelectorAll('.nav-tab');
-        const contentSections = document.querySelectorAll('.content-section');
+        // UTC Timestamp 반환
+        // targetKST는 이미 로컬 시간대 개념이 섞여있으므로, 명확하게 UTC timestamp로 변환
+        // 위에서 setUTCHours를 썼으므로 targetKST 자체가 UTC 기준 03:00 (KST 12:00)임
+        return targetKST.getTime(); 
+    }
 
-        navTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                const target = tab.dataset.target;
-                
-                navTabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                
-                contentSections.forEach(section => {
-                    section.classList.remove('active');
-                    if (section.id === target) {
-                        section.classList.add('active');
-                    }
-                });
-
-                // 탭 전환 시 목차 재생성
-                generateTOC();
-                // 탭 전환 시 스크롤 맨 위로
-                window.scrollTo(0, 0);
-                
-                // [수정] Mermaid 관련 탭 클릭 로직 제거
-            });
-        });
-
-
-        // --- 목차 (TOC) 생성 및 스크롤 스파이 로직 ---
-        const tocList = document.getElementById('tocList');
-        const mainContentArea = document.getElementById('mainContentArea');
-        let headings = [];
-
-        function generateTOC() {
-            tocList.innerHTML = '';
-            // 현재 활성화된 탭의 헤더만 가져옵니다.
-            const activeSection = document.querySelector('.content-section.active');
-            if (!activeSection) return;
+    // 서버 시간 동기화 (WorldTimeAPI 사용)
+    async function syncWithServer() {
+        syncDot.className = 'dot syncing';
+        syncText.innerText = '동기화 중...';
+        
+        try {
+            const startTick = performance.now();
             
-            headings = activeSection.querySelectorAll('h2, h3, h4');
+            // 캐시 방지를 위해 타임스탬프 쿼리 추가
+            const response = await fetch(`https://worldtimeapi.org/api/timezone/Asia/Seoul?t=${Date.now()}`);
+            if (!response.ok) throw new Error('Network response was not ok');
             
-            headings.forEach((heading, index) => {
-                const level = heading.tagName.toLowerCase().replace('h', '');
-                const text = heading.textContent;
-                
-                if (!heading.id) {
-                    heading.id = `${activeSection.id}-heading-${index}`;
-                }
+            const data = await response.json();
+            const endTick = performance.now();
+            
+            // RTT (Round Trip Time) 계산 및 보정
+            // 서버 시간은 요청을 받은 시점의 시간이므로, 돌아오는 시간(RTT/2)을 더해야 현재 시간과 가까워짐
+            const rtt = endTick - startTick;
+            const serverTime = new Date(data.datetime).getTime() + (rtt / 2);
+            const localTime = Date.now();
+            
+            // 오차 계산
+            timeOffset = serverTime - localTime;
+            
+            // 다음 타겟 시간 재계산
+            nextTargetTime = calculateNextNoonKST(serverTime);
 
-                const li = document.createElement('li');
-                li.className = 'toc-item';
-                li.setAttribute('data-level', level);
+            isSynced = true;
+            syncDot.className = 'dot active';
+            syncText.innerText = 'KST 동기화 완료';
+            offsetVal.innerText = Math.round(timeOffset);
+            
+            console.log(`[Sync] RTT: ${rtt.toFixed(2)}ms, Offset: ${timeOffset.toFixed(2)}ms`);
 
-                const a = document.createElement('a');
-                a.href = `#${heading.id}`;
-                a.className = 'toc-link';
-                a.textContent = text;
-                
-                a.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    
-                    document.querySelectorAll('.toc-link').forEach(link => link.classList.remove('active'));
-                    a.classList.add('active');
-                    
-                    if (window.innerWidth <= 768) {
-                        tocSidebar.classList.remove('visible');
-                    }
-                });
+        } catch (error) {
+            console.error('Sync failed:', error);
+            syncDot.className = 'dot error';
+            syncText.innerText = '동기화 실패 (로컬 기준)';
+            isSynced = false;
+            timeOffset = 0; // 실패 시 로컬 시간 사용
+            
+            // 로컬 시간 기준으로 타겟 설정
+            const now = Date.now();
+            nextTargetTime = calculateNextNoonKST(now);
+        }
+    }
 
-                li.appendChild(a);
-                tocList.appendChild(li);
-            });
+    function updateTimer() {
+        const now = Date.now() + timeOffset; // 보정된 현재 시간
+        
+        // 타겟 시간이 설정되지 않았으면 리턴
+        if (!nextTargetTime) {
+            requestAnimationFrame(updateTimer);
+            return;
         }
 
-        // 스크롤 시 활성 목차 항목 업데이트
-        let isScrolling = false;
-        window.addEventListener('scroll', () => {
-            if (isScrolling) return;
+        const distance = nextTargetTime - now;
+
+        if (distance <= 0) {
+            // 타이머 종료 시 처리
+            displayTimeEl.innerText = "12:00:00";
+            displayMsEl.innerText = ".000";
+            document.body.classList.add('finished');
             
-            isScrolling = true;
-            setTimeout(() => {
-                const scrollPosition = window.scrollY + 150; // 오프셋
-                let currentHeading = null;
-                
-                // 현재 활성화된 탭의 헤더만 대상으로 합니다.
-                const activeSection = document.querySelector('.content-section.active');
-                if (!activeSection) {
-                    isScrolling = false;
-                    return;
-                }
-                
-                const activeHeadings = activeSection.querySelectorAll('h2, h3, h4');
-                activeHeadings.forEach(heading => {
-                    if (heading.offsetTop <= scrollPosition) {
-                        currentHeading = heading;
-                    }
-                });
+            // 1초 뒤에 다시 다음 날 12시로 리셋 로직이 필요하다면 여기에 추가
+            // 여기서는 0이 된 상태 유지
+        } else {
+            document.body.classList.remove('finished');
+            
+            const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((distance % (1000 * 60)) / 1000);
+            const ms = Math.floor(distance % 1000);
 
-                document.querySelectorAll('.toc-link').forEach(link => link.classList.remove('active'));
-                if (currentHeading) {
-                    const activeLink = document.querySelector(`.toc-link[href="#${currentHeading.id}"]`);
-                    if (activeLink) {
-                        activeLink.classList.add('active');
-                    }
-                }
-                isScrolling = false;
-            }, 100);
-        });
+            // 00 패딩
+            const hh = h < 10 ? "0" + h : h;
+            const mm = m < 10 ? "0" + m : m;
+            const ss = s < 10 ? "0" + s : s;
+            const mss = ms < 10 ? "00" + ms : ms < 100 ? "0" + ms : ms;
 
-        // --- 사이드바 토글 (모바일) ---
-        const tocSidebar = document.getElementById('tocSidebar');
-        const mobileTocToggle = document.getElementById('mobileTocToggle');
+            displayTimeEl.innerText = `${hh}:${mm}:${ss}`;
+            displayMsEl.innerText = `.${mss}`;
+        }
 
-        mobileTocToggle.addEventListener('click', () => {
-            tocSidebar.classList.toggle('visible');
-        });
+        requestAnimationFrame(updateTimer);
+    }
 
-        // --- 초기화 ---
-        // DOM이 완전히 로드된 후 스크립트 실행
-        document.addEventListener('DOMContentLoaded', () => {
-            generateTOC();
-            // [수정] Mermaid 초기화 및 렌더링 호출 제거
-        });
-    </script>
+    // 초기 실행
+    syncWithServer();
+    requestAnimationFrame(updateTimer);
+
+    // 1분마다 재동기화하여 오차 누적 방지
+    setInterval(syncWithServer, 60000);
+    
+    // 탭 활성화 시 즉시 재동기화
+    document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) syncWithServer();
+    });
+
+</script>
 </body>
 </html>
